@@ -20,7 +20,8 @@ public class MainActivity extends ActionBarActivity {
     int sequence[] = new int[nbMax];
     int currentIndex = -1;
     int nbCoupsReussis;
-    int vitesse = 1000;
+    int vitesse = 800;
+    int nbPoints;
 
 
     Button buttonA;
@@ -28,11 +29,14 @@ public class MainActivity extends ActionBarActivity {
     Button buttonC;
     Button buttonD;
     Button buttonStart;
+    Button buttonStop;
 
     Button levelButtonArray[] = new Button[8];
 
-    Double timeDivision;
+    Double timeDivision = 1.25;
     int levelSelected;
+    int nbCoupPourAcceleration[] = new int[] {10, 9, 8, 7, 6, 5, 4, 3};
+    boolean stopGame = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,13 +49,23 @@ public class MainActivity extends ActionBarActivity {
         removeListeners();
 
         levelSelected = 3;
-        timeDivision = 1.0 + (((double)levelSelected)/10);
         levelButtonArray[levelSelected].setBackgroundColor(Color.RED);
 
         buttonStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 newGame();
+            }
+        });
+
+        buttonStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                removeListeners();
+                addLevelListeners();
+                readyAllButton();
+                stopGame = true;
+
             }
         });
     }
@@ -85,6 +99,7 @@ public class MainActivity extends ActionBarActivity {
         buttonC = (Button)findViewById(R.id.buttonC);
         buttonD = (Button)findViewById(R.id.buttonD);
         buttonStart = (Button)findViewById(R.id.buttonStart);
+        buttonStop = (Button)findViewById(R.id.buttonStop);
 
         levelButtonArray[0] = (Button)findViewById(R.id.buttonTeletobies);
         levelButtonArray[1] = (Button)findViewById(R.id.buttonNewbie);
@@ -97,11 +112,13 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public void newGame(){
+        stopGame = false;
         removeListeners();
         removeLevelListeners();
         vitesse = 1000;
         nbCoupsReussis = 0;
         currentIndex = -1;
+        nbPoints = 0;
         setSequence();
         showSequence();
     }
@@ -146,8 +163,9 @@ public class MainActivity extends ActionBarActivity {
             }else if(currentIndex == nbCoupsReussis){
                 removeListeners();
                 nbCoupsReussis++;
+                nbPoints+=nbCoupsReussis*(1000/vitesse);
                 currentIndex = -1;
-                if ((nbCoupsReussis % 5) == 0){
+                if ((nbCoupPourAcceleration[levelSelected] != 10) && (nbCoupsReussis % nbCoupPourAcceleration[levelSelected]) == 0){
                     acceleration();
                 }else{
                     showSequence();
@@ -161,7 +179,7 @@ public class MainActivity extends ActionBarActivity {
     public void endOfGameWin(){
         readyAllButton();
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("You beat the game congratulation, you are the best !!!")
+        builder.setMessage("You beat the game congratulation, you are the best !!! \n Number of points: "+nbPoints)
                 .setTitle("YOU WON")
                 .setNeutralButton("OK", new DialogInterface.OnClickListener(){
                     public void onClick(DialogInterface dialog, int id){
@@ -181,8 +199,8 @@ public class MainActivity extends ActionBarActivity {
     public void endOfGameLose(){
         readyAllButton();
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("You lost the game but made it up to "+nbCoupsReussis+" points.")
-                .setTitle("GAMO OVER")
+        builder.setMessage("You lost the game but made it up to "+nbPoints+" points.")
+                .setTitle("GAME OVER")
                 .setNeutralButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         addLevelListeners();
@@ -308,11 +326,7 @@ public class MainActivity extends ActionBarActivity {
             levelButtonArray[i].setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    timeDivision = 1.0 + (level/10);
-                    Log.i("level", "Level is : "+level+"  Division is: "+timeDivision);
-
                     levelButtonArray[levelSelected].setBackgroundColor(Color.WHITE);
-
                     levelButtonArray[(int)level].setBackgroundColor(Color.RED);
                     levelSelected = (int)level;
                 }
@@ -330,25 +344,27 @@ public class MainActivity extends ActionBarActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    Thread.sleep(vitesse);
-                    MainActivity.this.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            pressButton(button);
-                        }
-                    });
-                    Thread.sleep(vitesse);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } finally {
-                    MainActivity.this.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            unpressButton(button);
-                            showSequence();
-                        }
-                    });
+                if (!stopGame){
+                    try {
+                        Thread.sleep(vitesse);
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                pressButton(button);
+                            }
+                        });
+                        Thread.sleep(vitesse);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                unpressButton(button);
+                                showSequence();
+                            }
+                        });
+                    }
                 }
             }
         }).start();
